@@ -1,0 +1,193 @@
+:root {
+  color-scheme: light;
+  --bg: #f4f7ff;
+  --bg-2: #eef4ff;
+  --surface: rgba(255, 255, 255, 0.9);
+  --surface-strong: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --primary: #2563eb;
+  --primary-2: #4f46e5;
+  --accent: #7c3aed;
+  --border: rgba(15, 23, 42, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.15), transparent 28%),
+    linear-gradient(135deg, var(--bg) 0%, var(--bg-2) 100%);
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+.nav-shell {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.75);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.hero-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(240, 247, 255, 0.95) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow: 0 24px 70px rgba(37, 99, 235, 0.16);
+}
+
+.hero-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 0%, rgba(255, 255, 255, 0.55) 45%, transparent 100%);
+  pointer-events: none;
+}
+
+.glass-card,
+.preview-card,
+.form-card,
+.dashboard-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.glass-card {
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+}
+
+.preview-card {
+  border-radius: 1.2rem;
+  overflow: hidden;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.preview-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-2) 100%);
+  color: white;
+  font-weight: 600;
+  padding: 0.9rem 1.25rem;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.2);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  color: var(--primary);
+  background: rgba(37, 99, 235, 0.07);
+  font-weight: 600;
+  padding: 0.9rem 1.25rem;
+}
+
+.stats-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  padding: 0.5rem 0.8rem;
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.section-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.section-subtitle {
+  color: var(--muted);
+  font-size: 1rem;
+  margin-top: 0.45rem;
+}
+
+.form-card {
+  border-radius: 1.5rem;
+  padding: 2rem;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
+}
+
+.form-card input,
+.form-card select {
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.form-card input:focus,
+.form-card select:focus {
+  border-color: rgba(37, 99, 235, 0.5);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.dashboard-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+#dashboard-content .rounded-lg,
+#dashboard-content .rounded-xl,
+#dashboard-content .shadow,
+#dashboard-content .shadow-lg {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08) !important;
+  border-radius: 1.1rem !important;
+}
+
+#dashboard-content .text-gray-500,
+#dashboard-content .text-gray-600 {
+  color: #64748b !important;
+}
+
+#dashboard-content .text-gray-900 {
+  color: #0f172a !important;
+}
+
+@media (max-width: 768px) {
+  .hero-panel {
+    border-radius: 1.2rem;
+  }
+
+  .form-card {
+    padding: 1.4rem;
+  }
+}

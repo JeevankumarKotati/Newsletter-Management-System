@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NewsletterHub — Modern Publishing Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="bg-gray-50">
+    <nav class="nav-shell">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <a href="/" class="flex items-center gap-3">
+                    <div class="flex items-center justify-center h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg">
+                        <i data-lucide="send" class="h-5 w-5"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-slate-900">NewsletterHub</h1>
+                        <p class="text-xs text-slate-500">Modern publishing studio</p>
+                    </div>
+                </a>
+                <div class="flex items-center space-x-3">
+                    <a href="/login" class="text-slate-700 hover:text-blue-600 px-3 py-2 rounded-full text-sm font-medium">Login</a>
+                    <a href="/register" class="btn-primary">Sign Up</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        <div class="hero-panel p-6 lg:p-10">
+            <div class="grid lg:grid-cols-[1.1fr_0.9fr] gap-8 items-center">
+                <div>
+                    <div class="stats-pill mb-5">
+                        <i data-lucide="sparkles" class="h-4 w-4"></i>
+                        <span>Trusted by modern editorial teams</span>
+                    </div>
+                    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-slate-900 leading-tight">
+                        Publish smarter,
+                        <span class="block text-blue-600">engage faster.</span>
+                    </h1>
+                    <p class="mt-5 text-lg text-slate-600 max-w-2xl">
+                        Discover standout stories, manage subscriptions, and deliver polished content experiences from one elegant dashboard.
+                    </p>
+                    <div class="mt-8 flex flex-wrap gap-3">
+                        <a href="/register" class="btn-primary">Get Started</a>
+                        <a href="#preview" class="btn-secondary">Explore Content</a>
+                    </div>
+                    <div class="mt-8 flex flex-wrap gap-3 text-sm text-slate-600">
+                        <span class="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-2"><i data-lucide="shield-check" class="h-4 w-4 text-blue-600"></i> Secure access</span>
+                        <span class="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-2"><i data-lucide="rocket" class="h-4 w-4 text-blue-600"></i> Fast publishing</span>
+                        <span class="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-2"><i data-lucide="messages-square" class="h-4 w-4 text-blue-600"></i> Reader feedback</span>
+                    </div>
+                </div>
+                <div class="rounded-[1.5rem] overflow-hidden shadow-2xl border border-white/50">
+                    <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1000&h=800&fit=crop&crop=center" alt="Editorial workspace" class="w-full h-[320px] md:h-[420px] object-cover">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        <div class="grid md:grid-cols-3 gap-6">
+            <div class="glass-card">
+                <div class="flex items-center justify-center h-12 w-12 rounded-2xl bg-blue-600/10 text-blue-600 mb-4">
+                    <i data-lucide="users" class="h-6 w-6"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-slate-900">Role-Based Access</h3>
+                <p class="mt-2 text-sm text-slate-600">Separate admin, editor, and subscriber experiences with clean permissions.</p>
+            </div>
+            <div class="glass-card">
+                <div class="flex items-center justify-center h-12 w-12 rounded-2xl bg-violet-600/10 text-violet-600 mb-4">
+                    <i data-lucide="file-text" class="h-6 w-6"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-slate-900">Content Management</h3>
+                <p class="mt-2 text-sm text-slate-600">Create polished issues and articles with a modern editorial workflow.</p>
+            </div>
+            <div class="glass-card">
+                <div class="flex items-center justify-center h-12 w-12 rounded-2xl bg-amber-500/10 text-amber-600 mb-4">
+                    <i data-lucide="star" class="h-6 w-6"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-slate-900">Feedback System</h3>
+                <p class="mt-2 text-sm text-slate-600">Readers can rate stories and share reactions that shape future content.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="preview" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+        <div class="text-center mb-8">
+            <h2 class="section-title">Latest Content</h2>
+            <p class="section-subtitle">A polished preview of your freshly published stories and issues.</p>
+        </div>
+
+        <div id="loading" class="text-center py-8">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p class="mt-2 text-slate-600">Loading content...</p>
+        </div>
+
+        <div id="content-container" class="mt-6 hidden">
+            <div class="mb-10">
+                <div class="flex items-center justify-between mb-5">
+                    <h3 class="text-2xl font-bold text-slate-900">Recent Articles</h3>
+                    <span class="stats-pill">Live updates</span>
+                </div>
+                <div id="articles-grid" class="grid gap-6 lg:grid-cols-3"></div>
+            </div>
+
+            <div class="mb-10">
+                <div class="flex items-center justify-between mb-5">
+                    <h3 class="text-2xl font-bold text-slate-900">Magazine Issues</h3>
+                    <span class="stats-pill">Curated editions</span>
+                </div>
+                <div id="issues-grid" class="grid gap-6 lg:grid-cols-2"></div>
+            </div>
+
+            <div>
+                <div class="flex items-center justify-between mb-5">
+                    <h3 class="text-2xl font-bold text-slate-900">Top Rated Articles</h3>
+                    <span class="stats-pill">Audience favorites</span>
+                </div>
+                <div id="top-rated-list" class="space-y-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        <div class="rounded-[2rem] bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 p-8 lg:p-12 text-center text-white shadow-2xl">
+            <h2 class="text-3xl font-extrabold sm:text-4xl">Ready to launch your next edition?</h2>
+            <p class="mt-4 text-lg text-blue-100 max-w-2xl mx-auto">Join the platform and turn your editorial workflow into a polished, modern publishing experience.</p>
+            <a href="/register" class="mt-8 inline-flex items-center justify-center px-6 py-3 rounded-full bg-white text-blue-700 font-semibold shadow-lg">Create Your Account</a>
+        </div>
+    </div>
+
+    <footer class="border-t border-white/40 bg-white/70 backdrop-blur">
+        <div class="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 text-center">
+            <h3 class="text-lg font-semibold text-slate-900">NewsletterHub</h3>
+            <p class="mt-2 text-slate-600">Your polished digital magazine management solution.</p>
+            <p class="mt-4 text-sm text-slate-500">© 2026 Newsletter Management System</p>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Load preview content with better error handling
+        async function loadPreviewContent() {
+            try {
+                console.log('Loading preview content...');
+                const response = await fetch('/api/preview');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Preview data loaded:', data);
+
+                // Hide loading, show content
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('content-container').classList.remove('hidden');
+
+                // Render content
+                renderArticles(data.articles || []);
+                renderIssues(data.issues || []);
+                renderTopRated(data.topRated || []);
+
+            } catch (error) {
+                console.error('Error loading preview content:', error);
+                const loadingEl = document.getElementById('loading');
+                loadingEl.innerHTML = '<p class="text-red-600">Failed to load content. Please try refreshing the page.</p>';
+            }
+        }
+
+        function renderArticles(articles) {
+            const container = document.getElementById('articles-grid');
+            if (!articles.length) {
+                container.innerHTML = '<p class="text-gray-500 col-span-full text-center">No articles available</p>';
+                return;
+            }
+
+            container.innerHTML = articles.map(article => `
+                <div class="preview-card bg-white">
+                    <img src="${article.featured_image_url || 'https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=400&h=200'}" 
+                         alt="${article.title}" class="w-full h-48 object-cover">
+                    <div class="p-6">
+                        <h4 class="text-lg font-semibold text-slate-900 mb-2 line-clamp-2">${article.title}</h4>
+                        <p class="text-slate-600 text-sm mb-3 line-clamp-3">${article.summary || 'No summary available'}</p>
+                        <div class="flex items-center justify-between text-sm text-slate-500 mb-4">
+                            <span>By ${article.author_name}</span>
+                            ${article.average_rating ? `<span class="flex items-center"><i data-lucide="star" class="h-4 w-4 text-yellow-400 mr-1"></i>${parseFloat(article.average_rating).toFixed(1)}</span>` : ''}
+                        </div>
+                        <div class="mt-4">
+                            <a href="/login" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                Login to read full article →
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function renderIssues(issues) {
+            const container = document.getElementById('issues-grid');
+            if (!issues.length) {
+                container.innerHTML = '<p class="text-gray-500 col-span-full text-center">No issues available</p>';
+                return;
+            }
+
+            container.innerHTML = issues.map(issue => `
+                <div class="preview-card bg-white">
+                    <img src="${issue.cover_image_url || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=400&h=300'}" 
+                         alt="${issue.title}" class="w-full h-64 object-cover">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-blue-600">Issue #${issue.issue_number}</span>
+                            <span class="text-sm text-slate-500">${new Date(issue.publication_date).toLocaleDateString()}</span>
+                        </div>
+                        <h4 class="text-xl font-semibold text-slate-900 mb-2">${issue.title}</h4>
+                        <p class="text-slate-600 mb-4 line-clamp-3">${issue.description || 'No description available'}</p>
+                        <a href="/login" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                            Login to read issue →
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderTopRated(topRated) {
+            const container = document.getElementById('top-rated-list');
+            if (!topRated.length) {
+                container.innerHTML = '<p class="text-gray-500 text-center">No rated articles available</p>';
+                return;
+            }
+
+            container.innerHTML = topRated.map((article, index) => `
+                <div class="preview-card bg-white p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-blue-100 text-blue-600 font-semibold">
+                                ${index + 1}
+                            </span>
+                        </div>
+                        <div class="ml-4 flex-1">
+                            <h4 class="text-lg font-medium text-slate-900">${article.title}</h4>
+                            <div class="flex items-center mt-1">
+                                <div class="flex items-center">
+                                    <i data-lucide="star" class="h-4 w-4 text-yellow-400 mr-1"></i>
+                                    <span class="text-sm text-slate-600">${parseFloat(article.average_rating).toFixed(1)} (${article.feedback_count} reviews)</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <a href="/login" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                Read →
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        // Load content when page loads
+        document.addEventListener('DOMContentLoaded', loadPreviewContent);
+    </script>
+
+    <style>
+        /* Add line-clamp utility for text truncation */
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+</body>
+</html>
