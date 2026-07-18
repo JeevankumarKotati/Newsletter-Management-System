@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - NewsletterHub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="bg-gray-50">
+    <nav class="nav-shell">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center">
+                    <a href="/" class="flex items-center gap-3">
+                        <div class="flex items-center justify-center h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-lg">
+                            <i data-lucide="send" class="h-5 w-5"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-bold text-slate-900">NewsletterHub</h1>
+                            <p class="text-xs text-slate-500">Workspace</p>
+                        </div>
+                    </a>
+                    <div class="hidden md:block ml-8">
+                        <div class="flex items-baseline space-x-2" id="navigation-menu"></div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="user-info" class="text-slate-700 text-sm font-medium"></span>
+                    <button id="logout-btn" class="text-slate-700 hover:text-blue-600 px-3 py-2 rounded-full text-sm font-medium">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- Loading State -->
+        <div id="loading" class="text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p class="mt-2 text-gray-600">Loading dashboard...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-state" class="hidden text-center py-12">
+            <div class="text-red-600 mb-4">
+                <i data-lucide="alert-circle" class="h-12 w-12 mx-auto mb-4"></i>
+                <h3 class="text-lg font-medium">Failed to Load Dashboard</h3>
+                <p class="mt-2 text-sm text-gray-600" id="error-message"></p>
+            </div>
+            <button onclick="retryLoad()" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                Try Again
+            </button>
+        </div>
+
+        <!-- Dashboard Content -->
+        <div id="dashboard-content" class="hidden dashboard-shell">
+            <!-- Role-specific content will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Modals and Forms Container -->
+    <div id="modals-container"></div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        let currentUser = null;
+
+        // Check authentication and load dashboard
+        async function initializeDashboard() {
+            try {
+                console.log('Initializing dashboard...');
+                
+                // Check authentication first
+                const authResponse = await fetch('/auth/me');
+                console.log('Auth response status:', authResponse.status);
+                
+                if (!authResponse.ok) {
+                    console.log('Not authenticated, redirecting to login');
+                    window.location.href = '/login';
+                    return;
+                }
+
+                const authData = await authResponse.json();
+                console.log('Auth data:', authData);
+                
+                if (!authData.success || !authData.user) {
+                    console.log('Invalid auth data, redirecting to login');
+                    window.location.href = '/login';
+                    return;
+                }
+
+                currentUser = authData.user;
+                console.log('Current user:', currentUser);
+
+                // Update user info in navigation
+                document.getElementById('user-info').textContent = 
+                    `${currentUser.full_name} (${currentUser.role})`;
+
+                // Setup navigation based on role
+                setupNavigation();
+
+                // Load role-specific dashboard
+                await loadDashboard();
+
+                // Hide loading, show content
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('dashboard-content').classList.remove('hidden');
+
+            } catch (error) {
+                console.error('Dashboard initialization error:', error);
+                showError('Failed to initialize dashboard: ' + error.message);
+            }
+        }
+
+        // Show error state
+        function showError(message) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('dashboard-content').classList.add('hidden');
+            document.getElementById('error-message').textContent = message;
+            document.getElementById('error-state').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        // Retry loading
+        function retryLoad() {
+            document.getElementById('error-state').classList.add('hidden');
+            document.getElementById('loading').classList.remove('hidden');
+            setTimeout(initializeDashboard, 1000);
+        }
+
+        // Setup navigation menu based on user role
+        function setupNavigation() {
+            const navMenu = document.getElementById('navigation-menu');
+            let navItems = [];
+
+            switch (currentUser.role) {
+                case 'admin':
+                    navItems = [
+                        { name: 'Dashboard', id: 'dashboard', active: true },
+                        { name: 'Users', id: 'users' },
+                        { name: 'Articles', id: 'articles' },
+                        { name: 'Issues', id: 'issues' },
+                        { name: 'Feedback', id: 'feedback' },
+                        { name: 'Reports', id: 'reports' }
+                    ];
+                    break;
+                case 'editor':
+                    navItems = [
+                        { name: 'Dashboard', id: 'dashboard', active: true },
+                        { name: 'My Articles', id: 'my-articles' },
+                        { name: 'All Articles', id: 'articles' },
+                        { name: 'Issues', id: 'issues' }
+                    ];
+                    break;
+                case 'subscriber':
+                    navItems = [
+                        { name: 'Dashboard', id: 'dashboard', active: true },
+                        { name: 'Articles', id: 'articles' },
+                        { name: 'Issues', id: 'issues' },
+                        { name: 'Profile', id: 'profile' }
+                    ];
+                    break;
+            }
+
+            navMenu.innerHTML = navItems.map(item => `
+                <a href="#" data-section="${item.id}" 
+                   class="nav-item ${item.active ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-700 hover:text-blue-600'} px-3 py-2 text-sm font-medium">
+                    ${item.name}
+                </a>
+            `).join('');
+
+            // Add click handlers for navigation
+            navMenu.addEventListener('click', (e) => {
+                if (e.target.classList.contains('nav-item')) {
+                    e.preventDefault();
+                    const section = e.target.dataset.section;
+                    switchSection(section);
+                }
+            });
+        }
+
+        // Switch between dashboard sections
+        async function switchSection(section) {
+            try {
+                // Update active navigation
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+                    item.classList.add('text-gray-700', 'hover:text-blue-600');
+                });
+                
+                const activeItem = document.querySelector(`[data-section="${section}"]`);
+                if (activeItem) {
+                    activeItem.classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+                    activeItem.classList.remove('text-gray-700', 'hover:text-blue-600');
+                }
+
+                // Show loading
+                const dashboardContent = document.getElementById('dashboard-content');
+                dashboardContent.innerHTML = '<div class="text-center py-8"><div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div><p class="mt-2 text-gray-600">Loading...</p></div>';
+
+                // Load section content
+                switch (section) {
+                    case 'dashboard':
+                        await loadDashboard();
+                        break;
+                    case 'users':
+                        await loadUsersSection();
+                        break;
+                    case 'articles':
+                        await loadArticlesSection();
+                        break;
+                    case 'my-articles':
+                        await loadMyArticlesSection();
+                        break;
+                    case 'issues':
+                        await loadIssuesSection();
+                        break;
+                    case 'feedback':
+                        await loadFeedbackSection();
+                        break;
+                    case 'reports':
+                        await loadReportsSection();
+                        break;
+                    case 'profile':
+                        await loadProfileSection();
+                        break;
+                    default:
+                        throw new Error('Unknown section: ' + section);
+                }
+            } catch (error) {
+                console.error('Error loading section:', error);
+                document.getElementById('dashboard-content').innerHTML = 
+                    `<div class="text-center py-8 text-red-600">
+                        <i data-lucide="alert-circle" class="h-8 w-8 mx-auto mb-2"></i>
+                        <p>Error loading ${section}: ${error.message}</p>
+                        <button onclick="switchSection('${section}')" class="mt-2 text-blue-600 hover:text-blue-800">Try Again</button>
+                    </div>`;
+                lucide.createIcons();
+            }
+        }
+
+        // Load main dashboard based on user role
+        async function loadDashboard() {
+            console.log('Loading dashboard for role:', currentUser.role);
+            
+            switch (currentUser.role) {
+                case 'admin':
+                    await loadAdminDashboard();
+                    break;
+                case 'editor':
+                    await loadEditorDashboard();
+                    break;
+                case 'subscriber':
+                    await loadSubscriberDashboard();
+                    break;
+                default:
+                    throw new Error('Unknown user role: ' + currentUser.role);
+            }
+        }
+
+        // Admin Dashboard
+        async function loadAdminDashboard() {
+            try {
+                console.log('Loading admin dashboard...');
+                const response = await fetch('/admin/dashboard');
+                console.log('Admin dashboard response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Admin dashboard data:', data);
+
+                document.getElementById('dashboard-content').innerHTML = `
+                    <div class="mb-8">
+                        <h1 class="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+                        <p class="mt-2 text-gray-600">System overview and management</p>
+                    </div>
+
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <i data-lucide="users" class="h-6 w-6 text-blue-600"></i>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">Total Users</dt>
+                                            <dd class="text-lg font-medium text-gray-900">${data.userStats?.total || 0}</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <i data-lucide="file-text" class="h-6 w-6 text-green-600"></i>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">Published Articles</dt>
+                                            <dd class="text-lg font-medium text-gray-900">${data.articleStats?.published || 0}</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <i data-lucide="book-open" class="h-6 w-6 text-purple-600"></i>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">Published Issues</dt>
+                                            <dd class="text-lg font-medium text-gray-900">${data.issueStats?.published || 0}</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <i data-lucide="star" class="h-6 w-6 text-yellow-600"></i>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">Avg Rating</dt>
+                                            <dd class="text-lg font-medium text-gray-900">${data.feedbackStats?.average_rating ? parseFloat(data.feedbackStats.average_rating).toFixed(1) : 'N/A'}</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="bg-white shadow rounded-lg">
+                            <div class="px-6 py-4 border-b border-gray-200">
+                                <h3 class="text-lg font-medium text-gray-900">Recent Users</h3>
+                            </div>
+                            <div class="px-6 py-4">
+                                <div class="space-y-3">
+                                    ${(data.recentUsers || []).slice(0, 5).map(user => `
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <p class="text-sm font-medium text-gray-900">${user.full_name || 'Unknown'}</p>
+                                                <p class="text-sm text-gray-500">${user.email || 'No email'}</p>
+                                            </div>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                user.role === 'admin' ? 'bg-red-100 text-red-800' :
+                                                user.role === 'editor' ? 'bg-blue-100 text-blue-800' :
+                                                'bg-green-100 text-green-800'
+                                            }">
+                                                ${user.role || 'subscriber'}
+                                            </span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white shadow rounded-lg">
+                            <div class="px-6 py-4 border-b border-gray-200">
+                                <h3 class="text-lg font-medium text-gray-900">Recent Articles</h3>
+                            </div>
+                            <div class="px-6 py-4">
+                                <div class="space-y-3">
+                                    ${(data.recentArticles || []).slice(0, 5).map(article => `
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <p class="text-sm font-medium text-gray-900">${article.title || 'Untitled'}</p>
+                                                <p class="text-sm text-gray-500">By ${article.author_name || 'Unknown'}</p>
+                                            </div>
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                article.status === 'published' ? 'bg-green-100 text-green-800' :
+                                                article.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-gray-100 text-gray-800'
+                                            }">
+                                                ${article.status || 'draft'}
+                                            </span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                lucide.createIcons();
+            } catch (error) {
+                console.error('Error loading admin dashboard:', error);
+                throw error;
+            }
+        }
+
+        // Editor Dashboard
+        async function loadEditorDashboard() {
+            try {
+                console.log('Loading editor dashboard...');
+                const response = await fetch('/editor/dashboard');
+                console.log('Editor dashboard response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Editor dashboard data:', data);
+
+                document.getElementById('dashboard-content').innerHTML = `
+                    <div class="mb-8">
+                        <h1 class="text-3xl font-bold text-gray-900">Editor Dashboard</h1>
+                        <p class="mt-2 text-gray-600">Manage your articles and content</p>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="mb-8">
+                        <div class="flex space-x-4">
+                            <button onclick="showCreateArticleModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                                <i data-lucide="plus" class="h-4 w-4 inline mr-2"></i>
+                                New Article
+                            </button>
+                            <button onclick="showCreateIssueModal()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                                <i data-lucide="book-open" class="h-4 w-4 inline mr-2"></i>
+                                New Issue
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Stats -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <i data-lucide="file-text" class="h-6 w-6 text-blue-600"></i>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">My Articles</dt>
+                                            <dd class="text-lg font-medium text-gray-900">${data.stats?.totalArticles || 0}</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <i data-lucide="check-circle" class="h-6 w-6 text-green-600"></i>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">Published</dt>
+                                            <dd class="text-lg font-medium text-gray-900">${data.stats?.publishedArticles || 0}</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <i data-lucide="edit" class="h-6 w-6 text-yellow-600"></i>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">Drafts</dt>
+                                            <dd class="text-lg font-medium text-gray-900">${data.stats?.draftArticles || 0}</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- My Recent Articles -->
+                    <div class="bg-white shadow rounded-lg">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h3 class="text-lg font-medium text-gray-900">My Recent Articles</h3>
+                        </div>
+                        <div class="px-6 py-4">
+                            ${(data.myArticles || []).length > 0 ? `
+                                <div class="space-y-4">
+                                    ${data.myArticles.slice(0, 5).map(article => `
+                                        <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                            <div class="flex-1">
+                                                <h4 class="text-sm font-medium text-gray-900">${article.title || 'Untitled'}</h4>
+                                                <p class="text-sm text-gray-500 mt-1">${article.issue_title || 'No issue assigned'}</p>
+                                                <p class="text-xs text-gray-400 mt-1">${article.created_at ? new Date(article.created_at).toLocaleDateString() : 'Unknown date'}</p>
+                                            </div>
+                                            <div class="flex items-center space-x-2">
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                    article.status === 'published' ? 'bg-green-100 text-green-800' :
+                                                    article.status === 'draft' ? 'bg-yellow-100 text-yellow-800' :
+                                                    'bg-gray-100 text-gray-800'
+                                                }">
+                                                    ${article.status || 'draft'}
+                                                </span>
+                                                <button onclick="editArticle(${article.id})" class="text-blue-600 hover:text-blue-800 text-sm">
+                                                    Edit
+                                                </button>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : `
+                                <p class="text-gray-500 text-center py-8">No articles yet. Create your first article!</p>
+                            `}
+                        </div>
+                    </div>
+                `;
+
+                lucide.createIcons();
+            } catch (error) {
+                console.error('Error loading editor dashboard:', error);
+                throw error;
+            }
+        }
+
+        // Subscriber Dashboard
+        async function loadSubscriberDashboard() {
+            try {
+                console.log('Loading subscriber dashboard...');
+                const response = await fetch('/subscriber/dashboard');
+                console.log('Subscriber dashboard response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Subscriber dashboard data:', data);
+
+                document.getElementById('dashboard-content').innerHTML = `
+                    <div class="mb-8">
+                        <h1 class="text-3xl font-bold text-gray-900">Welcome back, ${currentUser.full_name}!</h1>
+                        <p class="mt-2 text-gray-600">Discover the latest articles and magazine issues</p>
+                    </div>
+
+                    <!-- Subscription Status -->
+                    <div class="mb-8">
+                        <div class="bg-white shadow rounded-lg p-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-lg font-medium text-gray-900">Subscription Status</h3>
+                                    <p class="text-sm text-gray-500 mt-1">
+                                        Status: <span class="font-medium ${data.userInfo?.subscription_status === 'active' ? 'text-green-600' : 'text-red-600'}">${data.userInfo?.subscription_status || 'unknown'}</span>
+                                    </p>
+                                </div>
+                                ${data.userInfo?.subscription_status !== 'active' ? `
+                                    <button onclick="renewSubscription()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                                        Renew Subscription
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Articles -->
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-bold text-gray-900 mb-6">Latest Articles</h2>
+                        <div class="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+                            ${(data.recentArticles || []).map(article => `
+                                <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                                    <img src="${article.featured_image_url || 'https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=400&h=200'}" 
+                                         alt="${article.title || 'Article'}" class="w-full h-48 object-cover">
+                                    <div class="p-6">
+                                        <h3 class="text-lg font-semibold text-gray-900 mb-2">${article.title || 'Untitled'}</h3>
+                                        <p class="text-gray-600 text-sm mb-3">${article.summary || 'No summary available'}</p>
+                                        <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
+                                            <span>By ${article.author_name || 'Unknown'}</span>
+                                            ${article.average_rating ? `
+                                                <span class="flex items-center">
+                                                    <i data-lucide="star" class="h-4 w-4 text-yellow-400 mr-1"></i>
+                                                    ${parseFloat(article.average_rating).toFixed(1)}
+                                                </span>
+                                            ` : ''}
+                                        </div>
+                                        <button onclick="viewArticle(${article.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                                            Read Article
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Recent Issues -->
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-bold text-gray-900 mb-6">Latest Issues</h2>
+                        <div class="grid gap-6 lg:grid-cols-3">
+                            ${(data.recentIssues || []).map(issue => `
+                                <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+                                    <img src="${issue.cover_image_url || 'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=400&h=300'}" 
+                                         alt="${issue.title || 'Issue'}" class="w-full h-64 object-cover">
+                                    <div class="p-6">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-sm font-medium text-blue-600">Issue #${issue.issue_number || 'N/A'}</span>
+                                            <span class="text-sm text-gray-500">${issue.publication_date ? new Date(issue.publication_date).toLocaleDateString() : 'No date'}</span>
+                                        </div>
+                                        <h3 class="text-xl font-semibold text-gray-900 mb-2">${issue.title || 'Untitled'}</h3>
+                                        <p class="text-gray-600 mb-4">${issue.description || 'No description available'}</p>
+                                        <button onclick="viewIssue(${issue.id})" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                                            Read Issue
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Top Rated Articles -->
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900 mb-6">Top Rated Articles</h2>
+                        <div class="space-y-4">
+                            ${(data.topRatedArticles || []).map((article, index) => `
+                                <div class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0">
+                                            <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-blue-100 text-blue-600 font-semibold">
+                                                ${index + 1}
+                                            </span>
+                                        </div>
+                                        <div class="ml-4 flex-1">
+                                            <h4 class="text-lg font-medium text-gray-900">${article.title || 'Untitled'}</h4>
+                                            <div class="flex items-center mt-1">
+                                                <div class="flex items-center">
+                                                    <i data-lucide="star" class="h-4 w-4 text-yellow-400 mr-1"></i>
+                                                    <span class="text-sm text-gray-600">${article.average_rating ? parseFloat(article.average_rating).toFixed(1) : 'N/A'} (${article.feedback_count || 0} reviews)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="ml-4">
+                                            <button onclick="viewArticle(${article.id})" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                                Read →
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+
+                lucide.createIcons();
+            } catch (error) {
+                console.error('Error loading subscriber dashboard:', error);
+                throw error;
+            }
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        async function fetchJson(url, options = {}) {
+            const response = await fetch(url, options);
+            const contentType = response.headers.get('content-type') || '';
+            const data = contentType.includes('application/json') ? await response.json() : await response.text();
+            if (!response.ok) {
+                throw new Error(typeof data === 'object' && data ? (data.error || data.message || 'Request failed') : data || 'Request failed');
+            }
+            return data;
+        }
+
+        function renderSectionLoading() {
+            document.getElementById('dashboard-content').innerHTML = `
+                <div class="text-center py-12">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <p class="mt-3 text-gray-600">Loading section...</p>
+                </div>
+            `;
+        }
+
+        function closeModal() {
+            document.getElementById('modals-container').innerHTML = '';
+        }
+
+        async function loadUsersSection() {
+            try {
+                renderSectionLoading();
+                const users = await fetchJson('/admin/users');
+                document.getElementById('dashboard-content').innerHTML = `
+                    <div class="mb-8 flex items-center justify-between">
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-900">User Management</h1>
+                            <p class="mt-2 text-gray-600">Review member access, roles, and subscriptions.</p>
+                        </div>
+                    </div>
+                    <div class="bg-white shadow rounded-lg overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subscription</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Joined</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200 bg-white">
+                                    ${(users || []).map((user) => `
+                                        <tr>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm font-medium text-gray-900">${escapeHtml(user.full_name || user.username || 'Unknown')}</div>
+                                                <div class="text-sm text-gray-500">${escapeHtml(user.email || 'No email')}</div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <select data-user-id="${user.id}" data-field="role" class="rounded-md border-gray-300 shadow-sm text-sm">
+                                                    <option value="subscriber" ${user.role === 'subscriber' ? 'selected' : ''}>Subscriber</option>
+                                                    <option value="editor" ${user.role === 'editor' ? 'selected' : ''}>Editor</option>
+                                                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                                                </select>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <select data-user-id="${user.id}" data-field="subscription_status" class="rounded-md border-gray-300 shadow-sm text-sm">
+                                                    <option value="active" ${user.subscription_status === 'active' ? 'selected' : ''}>Active</option>
+                                                    <option value="expired" ${user.subscription_status === 'expired' ? 'selected' : ''}>Expired</option>
+                                                    <option value="cancelled" ${user.subscription_status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
+                                                </select>
+                                            </td>
+                                            <td class="px-6 py-4 text-sm text-gray-500">${user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+
+                document.querySelectorAll('[data-user-id][data-field]').forEach((select) => {
+                    select.addEventListener('change', async (event) => {
+                        const userId = event.target.dataset.userId;
+                        const field = event.target.dataset.field;
+                        const rowUser = (users || []).find((entry) => entry.id === userId || entry.id?.toString() === userId?.toString());
+                        if (!rowUser) return;
+
+                        const payload = {
+                            username: rowUser.username,
+                            email: rowUser.email,
+                            full_name: rowUser.full_name,
+                            role: rowUser.role,
+                            subscription_status: rowUser.subscription_status,
+                        };
+                        payload[field] = event.target.value;
+
+                        try {
+                            await fetchJson(`/admin/users/${userId}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload),
+                            });
+                            await loadUsersSection();
+                        } catch (error) {
+                            alert(error.message);
+                        }
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading users section:', error);
+                document.getElementById('dashboard-content').innerHTML = `<div class="text-center py-8 text-red-600">${escapeHtml(error.message)}</div>`;
+            }
+        }
+
+        async function loadArticlesSection() {
+            try {
+                renderSectionLoading();
+                const endpoint = currentUser.role === 'admin' ? '/admin/articles' : '/editor/articles';
+                const articles = await fetchJson(endpoint);
+                document.getElementById('dashboard-content').innerHTML = `
+                    <div class="mb-8 flex items-center justify-between">
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-900">${currentUser.role === 'admin' ? 'Content Library' : 'Articles'}</h1>
+                            <p class="mt-2 text-gray-600">Review, edit, and manage published content.</p>
+                        </div>
+                        ${currentUser.role === 'editor' ? `<button onclick="showCreateArticleModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">New Article</button>` : ''}
+                    </div>
+                    <div class="bg-white shadow rounded-lg overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Author</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200 bg-white">
+                                    ${(articles || []).map((article) => `
+                                        <tr>
+                                            <td class="px-6 py-4">
+                                                <div class="text-sm font-medium text-gray-900">${escapeHtml(article.title || 'Untitled')}</div>
+                                                <div class="text-sm text-gray-500">${escapeHtml(article.summary || 'No summary')}</div>
+                                            </td>
+                                            <td class="px-6 py-4 text-sm text-gray-500">${escapeHtml(article.author_name || 'Unknown')}</td>
+                                            <td class="px-6 py-4">
+                                                <select data-article-id="${article.id}" data-field="status" class="rounded-md border-gray-300 shadow-sm text-sm">
+                                                    <option value="draft" ${article.status === 'draft' ? 'selected' : ''}>Draft</option>
+                                                    <option value="published" ${article.status === 'published' ? 'selected' : ''}>Published</option>
+                                                    <option value="archived" ${article.status === 'archived' ? 'selected' : ''}>Archived</option>
+                                                </select>
+                                            </td>
+                                            <td class="px-6 py-4 space-x-2">
+                                                <button onclick="editArticle('${article.id}')" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Edit</button>
+                                                <button onclick="deleteArticle('${article.id}')" class="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+
+                document.querySelectorAll('[data-article-id][data-field]').forEach((select) => {
+                    select.addEventListener('change', async (event) => {
+                        try {
+                            await fetchJson(`/${currentUser.role}/articles/${event.target.dataset.articleId}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ status: event.target.value }),
+                            });
+                            await loadArticlesSection();
+                        } catch (error) {
+                            alert(error.message);
+                        }
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading articles section:', error);
+                document.getElementById('dashboard-content').innerHTML = `<div class="text-center py-8 text-red-600">${escapeHtml(error.message)}</div>`;
+            }
+        }
+
+        async function loadMyArticlesSection() {
+            try {
+                renderSectionLoading();
+                const data = await fetchJson('/editor/dashboard');
+                const articles = data.myArticles || [];
+                document.getElementById('dashboard-content').innerHTML = `
+                    <div class="mb-8 flex items-center justify-between">
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-900">My Articles</h1>
+                            <p class="mt-2 text-gray-600">Track your draft and published work.</p>
+                        </div>
+                        <button onclick="showCreateArticleModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">New Article</button>
+                    </div>
+                    <div class="space-y-4">
+                        ${(articles || []).map((article) => `
+                            <div class="bg-white p-5 rounded-lg shadow border border-gray-200 flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900">${escapeHtml(article.title || 'Untitled')}</h3>
+                                    <p class="text-sm text-gray-500">${escapeHtml(article.issue_title || 'No issue assigned')}</p>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${article.status === 'published' ? 'bg-green-100 text-green-800' : article.status === 'draft' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}">${escapeHtml(article.status || 'draft')}</span>
+                                    <button onclick="editArticle('${article.id}')" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Edit</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading my articles section:', error);
+                document.getElementById('dashboard-content').innerHTML = `<div class="text-center py-8 text-red-600">${escapeHtml(error.message)}</div>`;
+            }
+        }
+
+        async function loadIssuesSection() {
+            try {
+                renderSectionLoading();
+                const endpoint = currentUser.role === 'admin' ? '/admin/issues' : '/editor/issues';
+                const issues = await fetchJson(endpoint);
+                document.getElementById('dashboard-content').innerHTML = `
+                    <div class="mb-8 flex items-center justify-between">
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-900">Issues</h1>
+                            <p class="mt-2 text-gray-600">Line up magazine editions and publish timelines.</p>
+                        </div>
+                        ${currentUser.role === 'editor' ? `<button onclick="showCreateIssueModal()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium">New Issue</button>` : ''}
+                    </div>
+                    <div class="grid gap-6 lg:grid-cols-2">
+                        ${(issues || []).map((issue) => `
+                            <div class="bg-white rounded-lg shadow p-6 border border-gray-200">
+                                <div class="flex items-center justify-between mb-3">
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-900">${escapeHtml(issue.title || 'Untitled issue')}</h3>
+                                        <p class="text-sm text-gray-500">Issue #${escapeHtml(issue.issue_number || 'N/A')} · ${issue.publication_date ? new Date(issue.publication_date).toLocaleDateString() : 'No date'}</p>
+                                    </div>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${issue.status === 'published' ? 'bg-green-100 text-green-800' : issue.status === 'draft' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}">${escapeHtml(issue.status || 'draft')}</span>
+                                </div>
+                                <p class="text-sm text-gray-600 mb-4">${escapeHtml(issue.description || 'No description available')}</p>
+                                <div class="flex items-center justify-between">
+                                    <select data-issue-id="${issue.id}" data-field="status" class="rounded-md border-gray-300 shadow-sm text-sm">
+                                        <option value="draft" ${issue.status === 'draft' ? 'selected' : ''}>Draft</option>
+                                        <option value="published" ${issue.status === 'published' ? 'selected' : ''}>Published</option>
+                                        <option value="archived" ${issue.status === 'archived' ? 'selected' : ''}>Archived</option>
+                                    </select>
+                                    <div class="space-x-2">
+                                        <button onclick="editIssue('${issue.id}')" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Edit</button>
+                                        <button onclick="deleteIssue('${issue.id}')" class="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+
+                document.querySelectorAll('[data-issue-id][data-field]').forEach((select) => {
+                    select.addEventListener('change', async (event) => {
+                        try {
+                            await fetchJson(`/${currentUser.role}/issues/${event.target.dataset.issueId}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ status: event.target.value }),
+                            });
+                            await loadIssuesSection();
+                        } catch (error) {
+                            alert(error.message);
+                        }
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading issues section:', error);
+                document.getElementById('dashboard-content').innerHTML = `<div class="text-center py-8 text-red-600">${escapeHtml(error.message)}</div>`;
+            }
+        }
+
+        async function loadFeedbackSection() {
+            try {
+                renderSectionLoading();
+                const feedback = await fetchJson('/admin/feedback');
+                document.getElementById('dashboard-content').innerHTML = `
+                    <div class="mb-8">
+                        <h1 class="text-3xl font-bold text-gray-900">Feedback Center</h1>
+                        <p class="mt-2 text-gray-600">See what readers are saying about recent stories.</p>
+                    </div>
+                    <div class="space-y-4">
+                        ${(feedback || []).map((item) => `
+                            <div class="bg-white rounded-lg shadow p-5 border border-gray-200">
+                                <div class="flex items-start justify-between">
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-900">${escapeHtml(item.article_title || 'Untitled article')}</h3>
+                                        <p class="text-sm text-gray-500 mt-1">By ${escapeHtml(item.user_name || 'Anonymous')}</p>
+                                    </div>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">${escapeHtml(item.rating || 0)} / 5</span>
+                                </div>
+                                <p class="mt-3 text-gray-600">${escapeHtml(item.comment || 'No comment provided')}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading feedback section:', error);
+                document.getElementById('dashboard-content').innerHTML = `<div class="text-center py-8 text-red-600">${escapeHtml(error.message)}</div>`;
+            }
+        }
+
+        async function loadReportsSection() {
+            try {
+                renderSectionLoading();
+                const reports = await fetchJson('/admin/reports');
+                document.getElementById('dashboard-content').innerHTML = `
+                    <div class="mb-8">
+                        <h1 class="text-3xl font-bold text-gray-900">Reports</h1>
+                        <p class="mt-2 text-gray-600">Highlight the content readers are responding to most.</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6 border border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Top Rated Articles</h2>
+                        <div class="space-y-3">
+                            ${(reports.topRatedArticles || []).map((article) => `
+                                <div class="flex items-center justify-between border-b border-gray-100 pb-3 last:border-b-0 last:pb-0">
+                                    <div>
+                                        <p class="font-medium text-gray-900">${escapeHtml(article.title || 'Untitled')}</p>
+                                        <p class="text-sm text-gray-500">${escapeHtml(article.feedback_count || 0)} review${(article.feedback_count || 0) === 1 ? '' : 's'}</p>
+                                    </div>
+                                    <div class="text-sm font-semibold text-yellow-600">★ ${Number(article.average_rating || 0).toFixed(1)}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading reports section:', error);
+                document.getElementById('dashboard-content').innerHTML = `<div class="text-center py-8 text-red-600">${escapeHtml(error.message)}</div>`;
+            }
+        }
+
+        async function loadProfileSection() {
+            try {
+                renderSectionLoading();
+                const profile = await fetchJson('/subscriber/profile');
+                document.getElementById('dashboard-content').innerHTML = `
+                    <div class="mb-8">
+                        <h1 class="text-3xl font-bold text-gray-900">Your Profile</h1>
+                        <p class="mt-2 text-gray-600">Keep your profile information and subscription status up to date.</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6 border border-gray-200 max-w-2xl">
+                        <form id="profile-form" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Full name</label>
+                                <input id="profile-full-name" value="${escapeHtml(profile.full_name || '')}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Username</label>
+                                <input id="profile-username" value="${escapeHtml(profile.username || '')}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Subscription status</label>
+                                <div class="mt-2 text-sm text-gray-600">${escapeHtml(profile.subscription_status || 'unknown')}</div>
+                            </div>
+                            <div class="flex gap-3">
+                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">Save Changes</button>
+                                <button type="button" onclick="renewSubscription()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium">Renew Subscription</button>
+                            </div>
+                        </form>
+                    </div>
+                `;
+
+                document.getElementById('profile-form').addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    try {
+                        await fetchJson('/subscriber/profile', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                full_name: document.getElementById('profile-full-name').value,
+                                username: document.getElementById('profile-username').value,
+                            }),
+                        });
+                        await loadProfileSection();
+                    } catch (error) {
+                        alert(error.message);
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading profile section:', error);
+                document.getElementById('dashboard-content').innerHTML = `<div class="text-center py-8 text-red-600">${escapeHtml(error.message)}</div>`;
+            }
+        }
+
+        async function showCreateArticleModal() {
+            const issues = await fetchJson('/editor/issues');
+            document.getElementById('modals-container').innerHTML = `
+                <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4">
+                    <div class="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-semibold text-gray-900">Create Article</h3>
+                            <button type="button" onclick="closeModal()" class="text-gray-500 hover:text-gray-700">✕</button>
+                        </div>
+                        <form id="article-modal-form" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Title</label>
+                                <input id="article-title" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Summary</label>
+                                <textarea id="article-summary" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" rows="3"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Content</label>
+                                <textarea id="article-content" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" rows="6" required></textarea>
+                            </div>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Issue</label>
+                                    <select id="article-issue" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                                        <option value="">No issue</option>
+                                        ${(issues || []).map((issue) => `<option value="${issue.id}">${escapeHtml(issue.title || 'Untitled issue')}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Status</label>
+                                    <select id="article-status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                                        <option value="draft">Draft</option>
+                                        <option value="published">Published</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="flex justify-end gap-3 pt-2">
+                                <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-md border border-gray-300 text-gray-700">Cancel</button>
+                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">Save Article</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('article-modal-form').addEventListener('submit', async (event) => {
+                event.preventDefault();
+                try {
+                    await fetchJson('/editor/articles', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: document.getElementById('article-title').value,
+                            summary: document.getElementById('article-summary').value,
+                            content: document.getElementById('article-content').value,
+                            issue_id: document.getElementById('article-issue').value || null,
+                            status: document.getElementById('article-status').value,
+                        }),
+                    });
+                    closeModal();
+                    await loadArticlesSection();
+                } catch (error) {
+                    alert(error.message);
+                }
+            });
+        }
+
+        async function showCreateIssueModal() {
+            document.getElementById('modals-container').innerHTML = `
+                <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4">
+                    <div class="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-xl font-semibold text-gray-900">Create Issue</h3>
+                            <button type="button" onclick="closeModal()" class="text-gray-500 hover:text-gray-700">✕</button>
+                        </div>
+                        <form id="issue-modal-form" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Title</label>
+                                <input id="issue-title" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Description</label>
+                                <textarea id="issue-description" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" rows="3"></textarea>
+                            </div>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Publication date</label>
+                                    <input id="issue-date" type="date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Status</label>
+                                    <select id="issue-status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                                        <option value="draft">Draft</option>
+                                        <option value="published">Published</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="flex justify-end gap-3 pt-2">
+                                <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-md border border-gray-300 text-gray-700">Cancel</button>
+                                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md">Save Issue</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('issue-modal-form').addEventListener('submit', async (event) => {
+                event.preventDefault();
+                try {
+                    await fetchJson('/editor/issues', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: document.getElementById('issue-title').value,
+                            description: document.getElementById('issue-description').value,
+                            publication_date: document.getElementById('issue-date').value,
+                            status: document.getElementById('issue-status').value,
+                        }),
+                    });
+                    closeModal();
+                    await loadIssuesSection();
+                } catch (error) {
+                    alert(error.message);
+                }
+            });
+        }
+
+        async function editArticle(id) {
+            try {
+                const article = await fetchJson(`/${currentUser.role === 'admin' ? 'admin' : 'editor'}/articles/${id}`);
+                const issues = await fetchJson('/editor/issues');
+                document.getElementById('modals-container').innerHTML = `
+                    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4">
+                        <div class="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-xl font-semibold text-gray-900">Edit Article</h3>
+                                <button type="button" onclick="closeModal()" class="text-gray-500 hover:text-gray-700">✕</button>
+                            </div>
+                            <form id="article-edit-form" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Title</label>
+                                    <input id="article-edit-title" value="${escapeHtml(article.title || '')}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Summary</label>
+                                    <textarea id="article-edit-summary" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" rows="3">${escapeHtml(article.summary || '')}</textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Content</label>
+                                    <textarea id="article-edit-content" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" rows="6" required>${escapeHtml(article.content || '')}</textarea>
+                                </div>
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Issue</label>
+                                        <select id="article-edit-issue" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                                            <option value="">No issue</option>
+                                            ${(issues || []).map((issue) => `<option value="${issue.id}" ${article.issue_id === issue.id ? 'selected' : ''}>${escapeHtml(issue.title || 'Untitled issue')}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Status</label>
+                                        <select id="article-edit-status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                                            <option value="draft" ${article.status === 'draft' ? 'selected' : ''}>Draft</option>
+                                            <option value="published" ${article.status === 'published' ? 'selected' : ''}>Published</option>
+                                            <option value="archived" ${article.status === 'archived' ? 'selected' : ''}>Archived</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="flex justify-end gap-3 pt-2">
+                                    <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-md border border-gray-300 text-gray-700">Cancel</button>
+                                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">Save Changes</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('article-edit-form').addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    try {
+                        await fetchJson(`/${currentUser.role === 'admin' ? 'admin' : 'editor'}/articles/${id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                title: document.getElementById('article-edit-title').value,
+                                summary: document.getElementById('article-edit-summary').value,
+                                content: document.getElementById('article-edit-content').value,
+                                issue_id: document.getElementById('article-edit-issue').value || null,
+                                status: document.getElementById('article-edit-status').value,
+                            }),
+                        });
+                        closeModal();
+                        await loadArticlesSection();
+                    } catch (error) {
+                        alert(error.message);
+                    }
+                });
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        async function editIssue(id) {
+            try {
+                const issue = await fetchJson(`/${currentUser.role === 'admin' ? 'admin' : 'editor'}/issues/${id}`);
+                document.getElementById('modals-container').innerHTML = `
+                    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4">
+                        <div class="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-xl font-semibold text-gray-900">Edit Issue</h3>
+                                <button type="button" onclick="closeModal()" class="text-gray-500 hover:text-gray-700">✕</button>
+                            </div>
+                            <form id="issue-edit-form" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Title</label>
+                                    <input id="issue-edit-title" value="${escapeHtml(issue.title || '')}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Description</label>
+                                    <textarea id="issue-edit-description" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" rows="3">${escapeHtml(issue.description || '')}</textarea>
+                                </div>
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Publication date</label>
+                                        <input id="issue-edit-date" type="date" value="${issue.publication_date ? new Date(issue.publication_date).toISOString().split('T')[0] : ''}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Status</label>
+                                        <select id="issue-edit-status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                                            <option value="draft" ${issue.status === 'draft' ? 'selected' : ''}>Draft</option>
+                                            <option value="published" ${issue.status === 'published' ? 'selected' : ''}>Published</option>
+                                            <option value="archived" ${issue.status === 'archived' ? 'selected' : ''}>Archived</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="flex justify-end gap-3 pt-2">
+                                    <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-md border border-gray-300 text-gray-700">Cancel</button>
+                                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md">Save Changes</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('issue-edit-form').addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    try {
+                        await fetchJson(`/${currentUser.role === 'admin' ? 'admin' : 'editor'}/issues/${id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                title: document.getElementById('issue-edit-title').value,
+                                description: document.getElementById('issue-edit-description').value,
+                                publication_date: document.getElementById('issue-edit-date').value,
+                                status: document.getElementById('issue-edit-status').value,
+                            }),
+                        });
+                        closeModal();
+                        await loadIssuesSection();
+                    } catch (error) {
+                        alert(error.message);
+                    }
+                });
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        async function deleteArticle(id) {
+            if (!confirm('Delete this article?')) return;
+            try {
+                await fetchJson(`/${currentUser.role === 'admin' ? 'admin' : 'editor'}/articles/${id}`, { method: 'DELETE' });
+                await loadArticlesSection();
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        async function deleteIssue(id) {
+            if (!confirm('Delete this issue?')) return;
+            try {
+                await fetchJson(`/${currentUser.role === 'admin' ? 'admin' : 'editor'}/issues/${id}`, { method: 'DELETE' });
+                await loadIssuesSection();
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        async function viewArticle(id) {
+            try {
+                const data = await fetchJson('/subscriber/articles/' + id);
+                document.getElementById('modals-container').innerHTML = `
+                    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4">
+                        <div class="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-xl font-semibold text-gray-900">${escapeHtml(data.article?.title || 'Article')}</h3>
+                                <button type="button" onclick="closeModal()" class="text-gray-500 hover:text-gray-700">✕</button>
+                            </div>
+                            <p class="text-sm text-gray-500 mb-4">By ${escapeHtml(data.article?.author_name || 'Unknown')} · ${data.article?.issue_title ? 'Issue: ' + escapeHtml(data.article.issue_title) : 'No issue linked'}</p>
+                            <div class="prose max-w-none text-gray-700">${escapeHtml(data.article?.content || 'No content available')}</div>
+                            <div class="mt-8 border-t border-gray-200 pt-4">
+                                <h4 class="font-semibold text-gray-900 mb-3">Leave feedback</h4>
+                                <form id="feedback-form" class="space-y-3">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Rating</label>
+                                        <select id="feedback-rating" class="mt-1 rounded-md border-gray-300 shadow-sm">
+                                            <option value="5">5 Stars</option>
+                                            <option value="4">4 Stars</option>
+                                            <option value="3">3 Stars</option>
+                                            <option value="2">2 Stars</option>
+                                            <option value="1">1 Star</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Comment</label>
+                                        <textarea id="feedback-comment" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" rows="3"></textarea>
+                                    </div>
+                                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">Submit Feedback</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('feedback-form').addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    try {
+                        await fetchJson(`/subscriber/articles/${id}/feedback`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                rating: document.getElementById('feedback-rating').value,
+                                comment: document.getElementById('feedback-comment').value,
+                            }),
+                        });
+                        alert('Feedback submitted successfully');
+                        closeModal();
+                    } catch (error) {
+                        alert(error.message);
+                    }
+                });
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        async function viewIssue(id) {
+            try {
+                const data = await fetchJson('/subscriber/issues/' + id);
+                document.getElementById('modals-container').innerHTML = `
+                    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4">
+                        <div class="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-xl font-semibold text-gray-900">${escapeHtml(data.issue?.title || 'Issue')}</h3>
+                                <button type="button" onclick="closeModal()" class="text-gray-500 hover:text-gray-700">✕</button>
+                            </div>
+                            <p class="text-sm text-gray-500 mb-4">Issue #${escapeHtml(data.issue?.issue_number || 'N/A')} · ${data.issue?.publication_date ? new Date(data.issue.publication_date).toLocaleDateString() : 'No date'}</p>
+                            <p class="text-gray-600 mb-6">${escapeHtml(data.issue?.description || 'No description available')}</p>
+                            <div class="space-y-3">
+                                ${(data.articles || []).map((article) => `
+                                    <div class="rounded-lg border border-gray-200 p-4">
+                                        <h4 class="font-semibold text-gray-900">${escapeHtml(article.title || 'Untitled article')}</h4>
+                                        <p class="text-sm text-gray-600 mt-1">${escapeHtml(article.summary || 'No summary')}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        async function renewSubscription() {
+            try {
+                await fetchJson('/subscriber/subscription/renew', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subscription_type: 'monthly' }),
+                });
+                await loadProfileSection();
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        // Logout functionality
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/auth/logout', { method: 'POST' });
+                if (response.ok) {
+                    window.location.href = '/';
+                } else {
+                    console.error('Logout failed');
+                    alert('Logout failed. Please try again.');
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                alert('Logout failed. Please try again.');
+            }
+        });
+
+        // Initialize dashboard when page loads
+        document.addEventListener('DOMContentLoaded', initializeDashboard);
+    </script>
+</body>
+</html>
